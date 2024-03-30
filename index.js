@@ -1,36 +1,18 @@
-const express = require("express");
-const app = express();
-const http = require("http");
-const cors = require("cors");
-const { Server } = require("socket.io");
-app.use(cors());
+// backend/server.js
+const WebSocket = require('ws');
 
-const server = http.createServer(app);
+const wss = new WebSocket.Server({ port: 8080 });
 
-const io = new Server(server, {
-  cors: {
-    origin: "http://localhost:3000",
-    methods: ["GET", "POST"],
-  },
-});
+wss.on('connection', function connection(ws) {
+  console.log('New WebSocket connection');
 
-io.on("connection", (socket) => {
-  console.log(`User Connected: ${socket.id}`);
-
-  socket.on("join_room", (data) => {
-    socket.join(data);
-    console.log(`User with ID: ${socket.id} joined room: ${data}`);
+  ws.on('message', function incoming(message) {
+    console.log('Received:', message);
+    // Broadcast received message to all clients
+    wss.clients.forEach(function each(client) {
+      if (client !== ws && client.readyState === WebSocket.OPEN) {
+        client.send(message);
+      }
+    });
   });
-
-  socket.on("send_message", (data) => {
-    socket.to(data.room).emit("receive_message", data);
-  });
-
-  socket.on("disconnect", () => {
-    console.log("User Disconnected", socket.id);
-  });
-});
-
-server.listen(3001, () => {
-  console.log("SERVER RUNNING");
 });
